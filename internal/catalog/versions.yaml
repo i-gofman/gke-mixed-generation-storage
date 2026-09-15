@@ -1,0 +1,49 @@
+# Single source of truth for GKE minimum-version requirements.
+#
+# The CLI, the Terraform module and the docs all read these values. If Google
+# changes a floor, change it here and regenerate (`make generate`) rather than
+# editing any other file.
+#
+# Verified against Google Cloud documentation on 2026-09-15. See docs/SOURCES.md.
+
+requirements:
+  computeclass:
+    id: computeclass
+    min: 1.30.3-gke.1451000
+    applies_to: [control_plane]
+    summary: Custom ComputeClasses (cloud.google.com/v1) in Autopilot and Standard.
+    doc: https://cloud.google.com/kubernetes-engine/docs/concepts/about-custom-compute-classes
+
+  node_pool_auto_creation:
+    id: node_pool_auto_creation
+    min: 1.33.3-gke.1136000
+    applies_to: [control_plane]
+    summary: >-
+      Below this version, spec.nodePoolAutoCreation.enabled additionally
+      requires cluster-level node auto-provisioning to be turned on. There is
+      no loud error if it is not - node pools simply are not created.
+    doc: https://cloud.google.com/kubernetes-engine/docs/concepts/about-custom-compute-classes
+
+  use_allowed_disk_topology:
+    id: use_allowed_disk_topology
+    min: 1.34.1-gke.2541000
+    applies_to: [control_plane, node_pools]
+    summary: >-
+      StorageClass parameter use-allowed-disk-topology. Both the control plane
+      and the node pools must meet this floor. Volumes provisioned by such a
+      StorageClass will not schedule onto node pools below it.
+    doc: https://cloud.google.com/kubernetes-engine/docs/concepts/hyperdisk
+
+  dynamic_disk_type_selection:
+    id: dynamic_disk_type_selection
+    min: 1.35.3-gke.1290000
+    applies_to: [control_plane]
+    summary: StorageClass parameters.type=dynamic (automated disk type selection).
+    doc: https://cloud.google.com/kubernetes-engine/docs/concepts/hyperdisk
+
+# Hyperdisk Balanced included (free) baseline performance, per volume.
+# Anything provisioned above these values is billable.
+hyperdisk_balanced_baseline:
+  iops: 3000
+  throughput_mib_per_sec: 140
+  doc: https://cloud.google.com/compute/docs/disks/hd-types/hyperdisk-balanced

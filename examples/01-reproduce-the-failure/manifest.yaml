@@ -1,0 +1,61 @@
+# Deliberately fragile: a fixed pd-balanced StorageClass and a Pod that starts
+# on N2. Moving the Pod to N4 later strands the volume.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: demo-pd-fixed
+provisioner: pd.csi.storage.gke.io
+parameters:
+  type: pd-balanced
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pinned-pd-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: demo-pd-fixed
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pinned-pd
+  labels:
+    app: pinned-pd
+spec:
+  replicas: 1
+  strategy:
+    # Recreate, not RollingUpdate: with a ReadWriteOnce volume the new Pod
+    # cannot attach while the old one still holds it, which would mask the
+    # failure we are trying to show with a different one.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pinned-pd
+  template:
+    metadata:
+      labels:
+        app: pinned-pd
+    spec:
+      nodeSelector:
+        cloud.google.com/machine-family: n2
+      containers:
+        - name: app
+          image: registry.k8s.io/busybox:1.27.2
+          command: ["sh", "-c", "while true; do date >> /data/log; sleep 30; done"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pinned-pd-data

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: mixed-generation-storage
+description: StorageClass and ComputeClass primitives for GKE clusters running mixed machine generations (N2 and N4)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.30.0-0"
+keywords:
+  - gke
+  - storage
+  - hyperdisk
+  - persistent-disk
+  - computeclass
+home: https://github.com/igofman/gke-mixed-generation-storage
+sources:
+  - https://github.com/igofman/gke-mixed-generation-storage
+maintainers:
+  - name: igofman
+    url: https://github.com/igofman
+annotations:
+  artifacthub.io/license: Apache-2.0

@@ -1,0 +1,100 @@
+# Default values for mixed-generation-storage.
+
+storageClass:
+  enabled: true
+  name: mixed-generation-safe
+
+  # Make this the cluster default. Only do this if you have first removed the
+  # default annotation from the existing default class - two defaults is an
+  # error state, and the one that wins is not defined.
+  isDefault: false
+
+  # "dynamic" lets GKE pick the disk type per node at provisioning time.
+  # Requires control plane 1.35.3-gke.1290000+. Set a concrete type
+  # (pd-balanced, hyperdisk-balanced, ...) to opt out of automated selection.
+  type: dynamic
+
+  # Which side to prefer on a node that supports both. GKE's own default is
+  # hyperdisk-type; we set it explicitly so it is visible in your values file.
+  diskTypePreference: hyperdisk-type
+
+  # Concrete types used on each side of the divide.
+  pdType: pd-balanced
+  hyperdiskType: hyperdisk-balanced
+
+  # Constrain scheduling to nodes that can attach the provisioned type.
+  # Requires the cluster AND every node pool at 1.34.1-gke.2541000+. Leaving
+  # this false means a bound volume can be stranded by any reschedule.
+  useAllowedDiskTopology: true
+
+  # WaitForFirstConsumer is required for per-node disk type selection to mean
+  # anything. Immediate binding provisions before a node is chosen.
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: true
+  reclaimPolicy: Delete
+
+  # Hyperdisk Balanced includes 3000 IOPS and 140 MiB/s per volume free.
+  # Anything above that is billable per volume. Leave empty to stay on the
+  # free baseline.
+  provisionedIops: ""
+  provisionedThroughput: ""
+
+  # Extra parameters merged into the StorageClass verbatim.
+  extraParameters: {}
+
+computeClass:
+  enabled: false
+  name: n4-preferred
+
+  # Ordered fallback list. Each entry may set its own boot disk, because an N4
+  # node cannot boot from pd-balanced.
+  priorities:
+    - machineFamily: n4
+      storage:
+        bootDiskType: hyperdisk-balanced
+        bootDiskSize: 100
+    - machineFamily: n2
+      storage:
+        bootDiskType: pd-balanced
+        bootDiskSize: 100
+
+  # DoNotScaleUp | ScaleUpAnyway. ScaleUpAnyway can place Pods on a machine
+  # type outside your priority list, which may not be able to attach their
+  # storage.
+  whenUnsatisfiable: DoNotScaleUp
+
+  # Requires 1.33.3-gke.1136000+ AND node auto-provisioning enabled on the
+  # cluster. The CRD will accept this either way; the nodes just never appear.
+  nodePoolAutoCreation:
+    enabled: false
+
+  # Migrating running Pods back to a higher priority is a reschedule. For
+  # workloads with bound Persistent Disk that is the exact event that breaks
+  # the attach.
+  activeMigration:
+    optimizeRulePriority: false
+
+# Deploy the audit CLI as a CronJob that writes its report to the Job log.
+audit:
+  enabled: false
+  image:
+    repository: ghcr.io/igofman/mixed-fleet-check
+    tag: ""          # defaults to .Chart.AppVersion
+    pullPolicy: IfNotPresent
+  schedule: "0 6 * * *"
+  failOn: error
+  skip: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  serviceAccount:
+    create: true
+    name: ""
+  nodeSelector: {}
+  tolerations: []
+
+nameOverride: ""
+fullnameOverride: ""

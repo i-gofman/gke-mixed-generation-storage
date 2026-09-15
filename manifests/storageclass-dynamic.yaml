@@ -1,0 +1,34 @@
+# A StorageClass that survives a mixed N2/N4 fleet.
+#
+# type: dynamic asks GKE to pick the disk type at provisioning time based on
+# the node the Pod is scheduled to. Requires control plane 1.35.3-gke.1290000+.
+#
+# Two parameters matter more than the rest:
+#
+#   disk-type-preference      On a node that supports BOTH families, GKE
+#                             defaults to hyperdisk-type. Set it explicitly so
+#                             the behaviour is in your repo, not in a default.
+#                             Hyperdisk Balanced on previous-generation
+#                             machines (N2, C2, ...) is allowlisted - contact
+#                             your account team before relying on it.
+#
+#   use-allowed-disk-topology Disk type selection runs ONCE, at provisioning.
+#                             Without this, nothing stops the scheduler from
+#                             later moving the Pod to a node that cannot attach
+#                             the type already provisioned. Requires the
+#                             cluster AND every node pool at
+#                             1.34.1-gke.2541000+.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mixed-generation-safe
+provisioner: pd.csi.storage.gke.io
+parameters:
+  type: dynamic
+  disk-type-preference: hyperdisk-type
+  pd-type: pd-balanced
+  hyperdisk-type: hyperdisk-balanced
+  use-allowed-disk-topology: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Delete

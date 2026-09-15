@@ -1,0 +1,22 @@
+{{- if .Values.computeClass.enabled }}
+{{- $cc := .Values.computeClass }}
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: {{ $cc.name }}
+  labels:
+    {{- include "mgs.labels" . | nindent 4 }}
+spec:
+  {{- if not $cc.priorities }}
+  {{- fail "computeClass.priorities must not be empty" }}
+  {{- end }}
+  # Passed through verbatim so any field the ComputeClass CRD supports can be
+  # set from values.yaml without a chart change.
+  priorities:
+    {{- toYaml $cc.priorities | nindent 4 }}
+  whenUnsatisfiable: {{ $cc.whenUnsatisfiable }}
+  nodePoolAutoCreation:
+    enabled: {{ $cc.nodePoolAutoCreation.enabled }}
+  activeMigration:
+    optimizeRulePriority: {{ $cc.activeMigration.optimizeRulePriority }}
+{{- end }}

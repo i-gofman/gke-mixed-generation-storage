@@ -1,0 +1,43 @@
+{{- if .Values.storageClass.enabled }}
+{{- $sc := .Values.storageClass }}
+{{- if and (eq $sc.type "dynamic") (not $sc.diskTypePreference) }}
+{{- fail "storageClass.diskTypePreference must be set when storageClass.type is dynamic: relying on the GKE default (hyperdisk-type) hides the decision" }}
+{{- end }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ $sc.name }}
+  labels:
+    {{- include "mgs.labels" . | nindent 4 }}
+  {{- if $sc.isDefault }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+  {{- end }}
+provisioner: pd.csi.storage.gke.io
+parameters:
+  type: {{ $sc.type | quote }}
+  {{- if eq $sc.type "dynamic" }}
+  disk-type-preference: {{ $sc.diskTypePreference | quote }}
+  {{- with $sc.pdType }}
+  pd-type: {{ . | quote }}
+  {{- end }}
+  {{- with $sc.hyperdiskType }}
+  hyperdisk-type: {{ . | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if $sc.useAllowedDiskTopology }}
+  use-allowed-disk-topology: "true"
+  {{- end }}
+  {{- with $sc.provisionedIops }}
+  provisioned-iops-on-create: {{ . | quote }}
+  {{- end }}
+  {{- with $sc.provisionedThroughput }}
+  provisioned-throughput-on-create: {{ . | quote }}
+  {{- end }}
+  {{- with $sc.extraParameters }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+volumeBindingMode: {{ $sc.volumeBindingMode }}
+allowVolumeExpansion: {{ $sc.allowVolumeExpansion }}
+reclaimPolicy: {{ $sc.reclaimPolicy }}
+{{- end }}

@@ -1,0 +1,42 @@
+# A ComputeClass that prefers N4 and falls back to N2 when N4 is unavailable.
+#
+# Requires control plane 1.30.3-gke.1451000+ for ComputeClass itself, and
+# 1.33.3-gke.1136000+ for nodePoolAutoCreation (which also needs node
+# auto-provisioning enabled on the cluster - the CRD will not tell you that).
+#
+# The per-priority storage block is the part people miss: an N4 node cannot
+# boot from pd-balanced, and giving an N2 priority a hyperdisk-balanced boot
+# disk only works if your project is allowlisted. Set them per priority.
+#
+# Capability differences that survive the fallback and will bite you:
+#   - N4 has no Local SSD. N2 does. A workload that needs Local SSD cannot
+#     run on the N4 priority at all.
+#   - An N2 node cannot attach a Hyperdisk Balanced volume unless the project
+#     is allowlisted, so a volume provisioned on N4 does not necessarily
+#     follow the Pod down to N2.
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: n4-preferred
+spec:
+  priorities:
+    - machineFamily: n4
+      storage:
+        bootDiskType: hyperdisk-balanced
+        bootDiskSize: 100
+    - machineFamily: n2
+      storage:
+        bootDiskType: pd-balanced
+        bootDiskSize: 100
+  # DoNotScaleUp keeps the failure loud: Pods stay Pending rather than landing
+  # on an arbitrary machine type that may not be able to attach their storage.
+  # Switch to ScaleUpAnyway only if you have verified that every workload using
+  # this class is storage-portable.
+  whenUnsatisfiable: DoNotScaleUp
+  nodePoolAutoCreation:
+    enabled: true
+  # activeMigration moves running Pods back up to a higher priority when
+  # capacity returns. Leave it off for anything with a bound Persistent Disk -
+  # that migration is exactly the reschedule that breaks the attach.
+  activeMigration:
+    optimizeRulePriority: false

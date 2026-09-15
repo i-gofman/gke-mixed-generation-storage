@@ -1,0 +1,68 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: mixed-fleet-check
+spec:
+  version: {{ .TagName }}
+  homepage: https://github.com/igofman/gke-mixed-generation-storage
+  shortDescription: Audit a GKE cluster for mixed-generation storage hazards
+  description: |
+    Finds storage configurations that break when GKE node pools of different
+    machine generations coexist - most often N2 and N4.
+
+    N4-family nodes cannot attach Persistent Disk at all. A pd-balanced volume
+    bound while a Pod ran on N2 fails to attach the moment that Pod is
+    rescheduled onto N4, and the symptom is FailedAttachVolume rather than
+    anything in the application logs.
+
+    The plugin is read-only. It reports bound volumes at risk, StorageClass
+    parameters that leave the decision to a default, GKE version floors
+    (including the one that applies per node pool, not just to the control
+    plane), and ComputeClass fallbacks that quietly change what the workload
+    can attach.
+  caveats: |
+    Requires read access to nodes, persistentvolumes, persistentvolumeclaims,
+    storageclasses, csidrivers, deployments, statefulsets and computeclasses.
+
+    Unofficial. Not a Google product.
+  platforms:
+    - selector:
+        matchLabels:
+          os: linux
+          arch: amd64
+      uri: https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_linux_amd64.tar.gz
+      sha256: "{{ addURIAndSha "https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_linux_amd64.tar.gz" .TagName }}"
+      bin: mixed-fleet-check_linux_amd64
+      files:
+        - from: "*"
+          to: "."
+    - selector:
+        matchLabels:
+          os: linux
+          arch: arm64
+      uri: https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_linux_arm64.tar.gz
+      sha256: "{{ addURIAndSha "https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_linux_arm64.tar.gz" .TagName }}"
+      bin: mixed-fleet-check_linux_arm64
+      files:
+        - from: "*"
+          to: "."
+    - selector:
+        matchLabels:
+          os: darwin
+          arch: amd64
+      uri: https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_darwin_amd64.tar.gz
+      sha256: "{{ addURIAndSha "https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_darwin_amd64.tar.gz" .TagName }}"
+      bin: mixed-fleet-check_darwin_amd64
+      files:
+        - from: "*"
+          to: "."
+    - selector:
+        matchLabels:
+          os: darwin
+          arch: arm64
+      uri: https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_darwin_arm64.tar.gz
+      sha256: "{{ addURIAndSha "https://github.com/igofman/gke-mixed-generation-storage/releases/download/{{ .TagName }}/mixed-fleet-check_darwin_arm64.tar.gz" .TagName }}"
+      bin: mixed-fleet-check_darwin_arm64
+      files:
+        - from: "*"
+          to: "."

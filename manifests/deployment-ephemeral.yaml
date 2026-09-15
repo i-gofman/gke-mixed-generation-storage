@@ -1,0 +1,53 @@
+# Generic ephemeral volumes: the portable option for scratch storage.
+#
+# Each Pod gets its own PVC, created when the Pod is created and deleted with
+# it. Because the disk is provisioned after the Pod is scheduled, a Pod that
+# lands on N4 gets Hyperdisk and a Pod that lands on N2 gets Persistent Disk -
+# no volume outlives the node generation it was provisioned for.
+#
+# This only works for data you can afford to lose on reschedule. For durable
+# state, use a StatefulSet with use-allowed-disk-topology, and accept that the
+# Pod is pinned to node pools that can attach its disk.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scratch-workload
+  labels:
+    app: scratch-workload
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: scratch-workload
+  template:
+    metadata:
+      labels:
+        app: scratch-workload
+    spec:
+      # Let the ComputeClass decide the machine family.
+      nodeSelector:
+        cloud.google.com/compute-class: n4-preferred
+      containers:
+        - name: app
+          image: registry.k8s.io/busybox:1.27.2
+          command: ["sh", "-c", "while true; do date >> /scratch/heartbeat; sleep 30; done"]
+          volumeMounts:
+            - name: scratch
+              mountPath: /scratch
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+        - name: scratch
+          ephemeral:
+            volumeClaimTemplate:
+              metadata:
+                labels:
+                  app: scratch-workload
+              spec:
+                accessModes: ["ReadWriteOnce"]
+                storageClassName: mixed-generation-safe
+                resources:
+                  requests:
+                    storage: 100Gi

@@ -1,0 +1,51 @@
+{{- if and .Values.audit.enabled .Values.audit.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "mgs.auditServiceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mgs.labels" . | nindent 4 }}
+{{- end }}
+{{- if .Values.audit.enabled }}
+---
+# Read-only. mixed-fleet-check never writes to the cluster; if a future version
+# asks you for write permissions, that is a bug worth reporting.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "mgs.fullname" . }}-audit
+  labels:
+    {{- include "mgs.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumes", "persistentvolumeclaims"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses", "csidrivers"]
+    verbs: ["get", "list"]
+  - apiGroups: ["cloud.google.com"]
+    resources: ["computeclasses"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "mgs.fullname" . }}-audit
+  labels:
+    {{- include "mgs.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "mgs.fullname" . }}-audit
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "mgs.auditServiceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,0 +1,54 @@
+{{- if .Values.audit.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mgs.fullname" . }}-audit
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mgs.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.audit.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "mgs.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ include "mgs.auditServiceAccountName" . }}
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: mixed-fleet-check
+              image: "{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.audit.image.pullPolicy }}
+              args:
+                - --format=table
+                - --fail-on={{ .Values.audit.failOn }}
+                {{- with .Values.audit.skip }}
+                - --skip={{ join "," . }}
+                {{- end }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                {{- toYaml .Values.audit.resources | nindent 16 }}
+          {{- with .Values.audit.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.audit.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
