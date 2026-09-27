@@ -14,8 +14,9 @@ This repo contains the audit tool that finds those volumes before a node
 upgrade does, plus the manifests, Helm chart and Terraform that avoid the
 problem in the first place.
 
-Companion to the article *Future-Proofing GKE Storage: N2 and N4 Node
-Coexistence*.
+Companion to the article *One StorageClass, Two VM Generations — how to run N2
+and N4 nodes in the same GKE cluster without your Pods quietly hanging
+forever*.
 
 > Not an officially supported Google product. See [DISCLAIMER.md](DISCLAIMER.md).
 
@@ -77,7 +78,10 @@ mixed-fleet-check --fail-on warn --format sarif > results.sarif
 **The divide is asymmetric.** N4 supports no Persistent Disk. N2 supports all
 Persistent Disk types *and* Hyperdisk Balanced — but the Hyperdisk half is
 allowlisted, so you must talk to your account team before designing around it.
-"Old uses PD, new uses Hyperdisk" is the wrong model.
+"Old uses PD, new uses Hyperdisk" is the wrong model. It is also why the
+StorageClass here sets `disk-type-preference: pd-type`: because N2 counts as a
+"supports both" node, GKE's own default would prefer Hyperdisk there, and that
+is the combination you may not be allowed to provision.
 
 **Disk type selection happens once.** `parameters.type: dynamic` picks a type at
 provisioning time, for the node the Pod first landed on, and never revisits it.
@@ -104,7 +108,7 @@ metadata:
 provisioner: pd.csi.storage.gke.io
 parameters:
   type: dynamic                      # GKE picks per node.       1.35.3-gke.1290000+
-  disk-type-preference: hyperdisk-type
+  disk-type-preference: pd-type      # ...and PD on nodes that could take either.
   pd-type: pd-balanced
   hyperdisk-type: hyperdisk-balanced
   use-allowed-disk-topology: "true"  # ...and keeps it that way. 1.34.1-gke.2541000+
@@ -132,7 +136,9 @@ helm install mgs charts/mixed-generation-storage \
 
 The chart refuses to render a `type: dynamic` StorageClass with an empty
 `disk-type-preference`, because falling back to the GKE default hides a
-decision you should be making on purpose.
+decision you should be making on purpose. It defaults to `pd-type`; set
+`storageClass.diskTypePreference=hyperdisk-type` if your project is allowlisted
+for Hyperdisk on previous-generation machines and you want it.
 
 ---
 
@@ -169,6 +175,13 @@ n4:
 If `mixed-fleet-check` reports `MGS108` against a family you are running, that
 family is missing from the catalog and was **not** checked. A PR adding it is
 the most useful contribution to this repo.
+
+Nothing here is specific to N2 and N4. The same one-way divide — older series on
+Persistent Disk, newer series Hyperdisk-only — runs through N2D → N4D,
+C2 → C3/C4 and M1 → M4, and through every generation that ships Hyperdisk-only
+after them. The catalog already carries those families; a new generation needs a
+catalog row and a ComputeClass priority, not a change to any application
+manifest.
 
 ---
 

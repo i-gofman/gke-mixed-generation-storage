@@ -80,8 +80,15 @@ kubectl describe pod POD | grep -A5 Events
 
 On any node that supports both, an unset `disk-type-preference` resolves to
 Hyperdisk. Combined with the allowlist above, the default can resolve to
-something your project cannot provision. Set it explicitly so the decision
-lives in your repo.
+something your project cannot provision.
+
+This is the parameter that actually configures the behaviour everyone assumes
+they already have. "N4 gets Hyperdisk, N2 gets Persistent Disk" is not what
+`type: dynamic` promises on its own — N2 is in the Hyperdisk Balanced support
+matrix, so GKE may class it as "supports both" and take the Hyperdisk branch.
+`disk-type-preference: pd-type` is what encodes the rule, and it is what the
+manifests and the chart in this repo ship with. Choose `hyperdisk-type`
+deliberately, or not at all.
 
 ## N4 has no Local SSD
 

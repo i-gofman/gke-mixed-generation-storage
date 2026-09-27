@@ -44,6 +44,27 @@ Pods on N4 should show `hyperdisk-balanced`; Pods on N2 should show
 are mixed — and that the control plane is at 1.35.3-gke.1290000 or later, or
 `type: dynamic` is simply being ignored.
 
+The authoritative answer is Compute Engine's, not the cluster's. Take a
+`volumeHandle` (it ends in the disk name) and ask directly:
+
+```bash
+kubectl get pv -o custom-columns=\
+NAME:.metadata.name,\
+CLAIM:.spec.claimRef.name,\
+SC:.spec.storageClassName,\
+HANDLE:.spec.csi.volumeHandle
+
+gcloud compute disks describe DISK_NAME --zone ZONE --format='value(type)'
+```
+
+Two Pods from one StorageClass, one disk of each type, is the whole point of
+the pattern in two lines of output.
+
+`pd-balanced` on N2 is a configured outcome here, not a default one — it is
+`disk-type-preference: pd-type` in `storageclass.yaml` doing the work. Remove
+that line and GKE may provision Hyperdisk on the N2 side, which needs your
+project to be allowlisted.
+
 ## The version floor that bites
 
 `use-allowed-disk-topology` needs **1.34.1-gke.2541000 on the cluster and on

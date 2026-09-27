@@ -108,6 +108,11 @@ previous-generation families (N2, C2, ...) is **allowlisted** — you must
 contact your account team — so the default can resolve to something your
 project cannot actually use.
 
+**Fix:** set it explicitly. On an N2/N4 fleet the value you almost certainly
+want is `pd-type` — Hyperdisk on N4, Persistent Disk on N2. `hyperdisk-type` is
+a valid answer only if you have been allowlisted for Hyperdisk on the
+previous-generation families you run.
+
 ### MGS101 — `type: dynamic` StorageClass does not set `use-allowed-disk-topology`
 
 Disk type selection runs **once**, at provisioning time. `dynamic` gets the

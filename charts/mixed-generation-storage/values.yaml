@@ -15,8 +15,12 @@ storageClass:
   type: dynamic
 
   # Which side to prefer on a node that supports both. GKE's own default is
-  # hyperdisk-type; we set it explicitly so it is visible in your values file.
-  diskTypePreference: hyperdisk-type
+  # hyperdisk-type, which on an N2/N4 fleet resolves to Hyperdisk on N2 - a
+  # combination that is allowlisted and may not be provisionable in your
+  # project. pd-type gives the behaviour people expect: Hyperdisk on N4,
+  # Persistent Disk on N2. Set explicitly either way, so it is visible here
+  # rather than hidden in a default.
+  diskTypePreference: pd-type
 
   # Concrete types used on each side of the divide.
   pdType: pd-balanced
