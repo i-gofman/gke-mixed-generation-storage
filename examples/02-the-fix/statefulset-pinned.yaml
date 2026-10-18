@@ -1,0 +1,61 @@
+# The durable path: a StatefulSet whose volumes are constrained to nodes that
+# can attach them, via use-allowed-disk-topology on the StorageClass.
+#
+# The trade-off is explicit and permanent: each Pod is now only schedulable
+# where its already-provisioned disk type is supported. Add capacity to the
+# wrong generation and these Pods will not use it.
+#
+# volumeClaimTemplates are also generation-pinned in a second, subtler way: the
+# first Pod to bind sets the type for the life of that replica's volume.
+# Scaling from 3 to 5 when your N4 pool has grown gives replicas 3 and 4 a
+# different disk type - and different performance - from replicas 0 to 2.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pinned-db
+  labels:
+    app: pinned-db
+spec:
+  clusterIP: None
+  selector:
+    app: pinned-db
+  ports:
+    - name: tcp
+      port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pinned-db
+spec:
+  serviceName: pinned-db
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pinned-db
+  template:
+    metadata:
+      labels:
+        app: pinned-db
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: app
+          image: registry.k8s.io/busybox:1.27.2
+          command: ["sh", "-c", "while true; do date >> /var/lib/data/log; sleep 30; done"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: mixed-generation-safe
+        resources:
+          requests:
+            storage: 100Gi

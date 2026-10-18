@@ -1,0 +1,130 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "${unformatted}" ]; then
+            echo "these files need gofmt:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test -race -coverprofile=coverage.out ./...
+
+      - name: coverage
+        run: go tool cover -func=coverage.out | tail -1
+
+  lint-go:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
+  yaml:
+    name: yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: yamllint
+        run: yamllint -c .yamllint.yaml .
+
+      - name: install kubeconform
+        run: |
+          curl -sSLo kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform.tar.gz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: validate manifests
+        # ComputeClass is a GKE CRD with no public schema in the standard
+        # catalogue, so it is skipped rather than silently passed.
+        run: |
+          kubeconform \
+            -strict \
+            -summary \
+            -kubernetes-version 1.34.0 \
+            -skip ComputeClass,Kustomization \
+            manifests/ examples/
+
+  helm:
+    name: helm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+
+      - run: helm lint charts/mixed-generation-storage
+
+      - name: template with defaults
+        run: helm template t charts/mixed-generation-storage >/dev/null
+
+      - name: template with everything enabled
+        run: |
+          helm template t charts/mixed-generation-storage \
+            --set computeClass.enabled=true \
+            --set audit.enabled=true \
+            --set storageClass.isDefault=true >/dev/null
+
+      - name: guard rails fire
+        run: |
+          if helm template t charts/mixed-generation-storage \
+               --set storageClass.diskTypePreference="" >/dev/null 2>&1; then
+            echo "expected an empty diskTypePreference to be rejected"
+            exit 1
+          fi
+
+  terraform:
+    name: terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: fmt
+        run: terraform -chdir=terraform fmt -check -recursive -diff
+
+      - name: validate
+        # init -backend=false so validate needs no credentials.
+        run: |
+          terraform -chdir=terraform init -backend=false -input=false
+          terraform -chdir=terraform validate
+
+  shell:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: shellcheck hack/*.sh

@@ -1,0 +1,36 @@
+{{ .Chart.Name }} {{ .Chart.Version }} installed as {{ .Release.Name }}.
+
+{{ if .Values.storageClass.enabled -}}
+StorageClass: {{ .Values.storageClass.name }}{{ if .Values.storageClass.isDefault }} (cluster default){{ end }}
+  type: {{ .Values.storageClass.type }}
+{{- if eq .Values.storageClass.type "dynamic" }}
+  Requires control plane 1.35.3-gke.1290000 or later.
+{{- end }}
+{{- if .Values.storageClass.useAllowedDiskTopology }}
+  use-allowed-disk-topology is on. This requires the CLUSTER AND EVERY NODE
+  POOL at 1.34.1-gke.2541000 or later. Node pools that lag will silently
+  refuse to schedule Pods using this class.
+{{- else }}
+  use-allowed-disk-topology is OFF. Volumes provisioned by this class can be
+  stranded if the Pod is later rescheduled onto a node of a machine family
+  that cannot attach the type already provisioned.
+{{- end }}
+{{ end -}}
+
+{{ if .Values.computeClass.enabled -}}
+ComputeClass: {{ .Values.computeClass.name }} ({{ .Values.computeClass.whenUnsatisfiable }})
+{{- if .Values.computeClass.nodePoolAutoCreation.enabled }}
+  nodePoolAutoCreation is on. It ALSO requires node auto-provisioning on the
+  cluster - the API accepts this field either way, the nodes just never
+  appear. Verify with:
+    gcloud container clusters describe CLUSTER --format="value(autoscaling.enableNodeAutoprovisioning)"
+{{- end }}
+{{ end -}}
+
+Audit the result:
+
+  kubectl get storageclass {{ .Values.storageClass.name }} -o yaml
+  mixed-fleet-check
+
+Existing volumes are not migrated. Disk type selection runs once, at
+provisioning time; anything already bound keeps the type it was given.

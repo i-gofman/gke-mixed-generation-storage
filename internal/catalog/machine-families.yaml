@@ -1,0 +1,168 @@
+# Compute Engine machine-family block storage capability matrix.
+#
+# Verified against the machine-series support tables in Google Cloud
+# documentation on 2026-09-15:
+#   https://cloud.google.com/compute/docs/disks/persistent-disks  (PD support)
+#   https://cloud.google.com/compute/docs/disks/hyperdisks         (Hyperdisk support)
+#   https://cloud.google.com/compute/docs/disks/local-ssd          (Local SSD support)
+#
+# Families not listed here are treated as UNKNOWN: the checker reports them
+# rather than guessing. Add them here and open a PR - no code changes needed.
+#
+# allowlisted: types that the docs mark as requiring you to contact your
+# account team. They are technically supported but you cannot assume access.
+
+families:
+  # --- 1st / 2nd generation: Persistent Disk natively ---
+  n1:
+    generation: 1
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    hyperdisk_allowlisted: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    local_ssd: true
+
+  n2:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd, pd-extreme]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-extreme, hyperdisk-throughput]
+    hyperdisk_allowlisted: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    local_ssd: true
+    notes: >-
+      Hyperdisk Extreme requires at least 80 vCPUs and is not supported on
+      custom N2 machine types.
+
+  n2d:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-throughput]
+    hyperdisk_allowlisted: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    local_ssd: true
+
+  e2:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    hyperdisk_allowlisted: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    local_ssd: false
+
+  c2:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: []
+    local_ssd: true
+
+  c2d:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    hyperdisk_allowlisted: [hyperdisk-balanced, hyperdisk-balanced-high-availability]
+    local_ssd: true
+
+  t2d:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-throughput]
+    local_ssd: false
+
+  t2a:
+    generation: 2
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: []
+    local_ssd: false
+
+  # --- 3rd generation: both ---
+  c3:
+    generation: 3
+    persistent_disk: [pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability,
+                hyperdisk-extreme, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: true
+    notes: Hyperdisk Extreme requires at least 88 vCPUs.
+
+  c3d:
+    generation: 3
+    persistent_disk: [pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability,
+                hyperdisk-extreme, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: true
+    notes: Hyperdisk Extreme requires at least 60 vCPUs.
+
+  z3:
+    generation: 3
+    persistent_disk: [pd-standard, pd-balanced, pd-ssd]
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-extreme, hyperdisk-throughput]
+    local_ssd: true
+
+  # --- 4th generation: Hyperdisk only. No Persistent Disk. ---
+  n4:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: false
+    boot_disk: [hyperdisk-balanced]
+    notes: >-
+      5th generation Intel Xeon (Emerald Rapids) with Titanium. No Persistent
+      Disk of any type, no Local SSD, no Hyperdisk Extreme.
+
+  n4a:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: false
+    boot_disk: [hyperdisk-balanced]
+    notes: Google Axion (Arm Neoverse N3). Arm workloads need matching images.
+
+  n4d:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: false
+    boot_disk: [hyperdisk-balanced]
+    notes: 5th generation AMD EPYC (Turin) with Titanium.
+
+  c4:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability,
+                hyperdisk-extreme, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: true
+    boot_disk: [hyperdisk-balanced]
+    notes: Hyperdisk Extreme requires at least 96 vCPUs.
+
+  c4a:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability,
+                hyperdisk-extreme, hyperdisk-throughput, hyperdisk-ml]
+    local_ssd: true
+    boot_disk: [hyperdisk-balanced]
+    notes: Google Axion (Arm). Local SSD only on -lssd machine types.
+
+  c4d:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-balanced-high-availability, hyperdisk-extreme, hyperdisk-ml]
+    local_ssd: true
+    boot_disk: [hyperdisk-balanced]
+    notes: Local SSD only on -lssd machine types.
+
+  m4:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-extreme]
+    local_ssd: false
+    boot_disk: [hyperdisk-balanced]
+
+  x4:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced, hyperdisk-extreme]
+    local_ssd: false
+    boot_disk: [hyperdisk-balanced]
+
+  h4d:
+    generation: 4
+    persistent_disk: []
+    hyperdisk: [hyperdisk-balanced]
+    local_ssd: true
+    boot_disk: [hyperdisk-balanced]

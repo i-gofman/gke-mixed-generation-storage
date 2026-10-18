@@ -1,0 +1,9 @@
+project_id = "my-project"
+region     = "us-central1"
+
+# Enable if you want ComputeClass nodePoolAutoCreation to work.
+enable_node_autoprovisioning = false
+
+labels = {
+  owner = "platform"
+}
